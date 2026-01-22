@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Smart Water Quality Monitor</title>
+
+  <!-- Chart.js library -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+      color: #fff;
+      display: flex;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: #fff;
+      color: #333;
+      width: 520px;
+      border-radius: 15px;
+      padding: 30px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+    }
+
+    h1 {
+      text-align: center;
+      color: #0077b6;
+    }
+
+    p {
+      text-align: center;
+      font-size: 14px;
+      color: #555;
+      margin-bottom: 20px;
+    }
+
+    label {
+      font-weight: bold;
+      margin-top: 10px;
+      display: block;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      margin-bottom: 15px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 15px;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      background: #0077b6;
+      color: white;
+      font-weight: bold;
+      font-size: 16px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      background: #023e8a;
+      transform: translateY(-2px);
+    }
+
+    #result {
+      text-align: center;
+      font-weight: bold;
+      margin-top: 15px;
+      padding: 10px;
+      border-radius: 10px;
+    }
+
+    .safe { background: #d4edda; color: #155724; }
+    .unsafe { background: #f8d7da; color: #721c24; }
+
+    img {
+      display: block;
+      margin: 0 auto 15px;
+      width: 150px;
+    }
+
+    canvas {
+      margin-top: 20px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: center;
+    }
+
+    th {
+      background: #0077b6;
+      color: #fff;
+    }
+
+    td.safe { background: #d4edda; color: #155724; }
+    td.unsafe { background: #f8d7da; color: #721c24; }
+
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <img id="statusImg" src="https://i.ibb.co/6RgWqP1/water-drop.png" alt="Water Drop Icon">
+    <h1>Smart Water Quality Monitor</h1>
+    <p>Grade 11 Science Fair Project</p>
+
+    <label>pH Value (6.5 – 8.5)</label>
+    <input type="number" id="ph" step="0.1" placeholder="e.g. 7.2">
+
+    <label>Turbidity (NTU)</label>
+    <input type="number" id="turbidity" placeholder="e.g. 3">
+
+    <button onclick="checkWater()">Analyze Water</button>
+
+    <div id="result"></div>
+
+    <canvas id="waterChart" width="400" height="200"></canvas>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Sample #</th>
+          <th>pH</th>
+          <th>Turbidity</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="historyBody">
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    let sampleCount = 0;
+    const maxSamples = 5; // keep last 5 samples
+    const phData = [];
+    const turbidityData = [];
+    const statusData = [];
+
+    const ctx = document.getElementById('waterChart').getContext('2d');
+    const chart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: [], // sample 1,2,3...
+        datasets: [
+          {
+            label: 'pH',
+            data: [],
+            backgroundColor: '#0077b6',
+            borderRadius: 5
+          },
+          {
+            label: 'Turbidity',
+            data: [],
+            backgroundColor: '#0096c7',
+            borderRadius: 5
+          }
+        ]
+      },
+      options: {
+        scales: {
+          y: {
+            beginAtZero: true,
+            max: 15
+          }
+        }
+      }
+    });
+
+    function checkWater() {
+      const ph = parseFloat(document.getElementById("ph").value);
+      const turbidity = parseFloat(document.getElementById("turbidity").value);
+      const result = document.getElementById("result");
+      const img = document.getElementById("statusImg");
+
+      if (isNaN(ph) || isNaN(turbidity)) {
+        result.textContent = "Enter all values.";
+        result.className = "unsafe";
+        return;
+      }
+
+      let status = '';
+      if (ph >= 6.5 && ph <= 8.5 && turbidity < 5) {
+        status = "SAFE";
+        result.textContent = "✅ WATER IS SAFE";
+        result.className = "safe";
+        img.src = "https://i.ibb.co/6RgWqP1/water-drop.png"; // safe icon
+      } else {
+        status = "UNSAFE";
+        result.textContent = "⚠️ WATER IS UNSAFE";
+        result.className = "unsafe";
+        img.src = "https://i.ibb.co/0tQ7yQZ/dirty-water.png"; // unsafe icon
+      }
+
+      // Add new sample
+      sampleCount++;
+      phData.push(ph);
+      turbidityData.push(turbidity);
+      statusData.push(status);
+
+      // Keep only last maxSamples
+      if(phData.length > maxSamples){
+        phData.shift();
+        turbidityData.shift();
+        statusData.shift();
+      }
+
+      // Update chart
+      chart.data.labels = Array.from({length: phData.length}, (_, i) => `Sample ${i+1}`);
+      chart.data.datasets[0].data = phData;
+      chart.data.datasets[1].data = turbidityData;
+      chart.update();
+
+      // Update table
+      const tbody = document.getElementById("historyBody");
+      tbody.innerHTML = ""; // clear table
+      for(let i = 0; i < phData.length; i++){
+        const row = `<tr>
+          <td>${i+1}</td>
+          <td>${phData[i]}</td>
+          <td>${turbidityData[i]}</td>
+          <td class="${statusData[i].toLowerCase()}">${statusData[i]}</td>
+        </tr>`;
+        tbody.innerHTML += row;
+      }
+    }
+  </script>
+</body>
+</html>
+
+
+
